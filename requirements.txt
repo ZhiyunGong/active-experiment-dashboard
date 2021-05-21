@@ -2,4 +2,4 @@ sklearn
 pandas
 plotly
 modal
-st_aggrid
+streamlit-aggrid
