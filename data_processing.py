@@ -14,17 +14,18 @@ import random
 from modAL.models import BayesianOptimizer
 from sklearn.gaussian_process import GaussianProcessRegressor
 from modAL.acquisition import max_UCB, max_EI, optimizer_EI, optimizer_UCB
-from sklearn.gaussian_process.kernels import Matern
+from sklearn.gaussian_process.kernels import Matern,RBF
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 from sklearn.manifold import TSNE
 import plotly.express as pxs
 from sklearn.decomposition import PCA
+import plotly.express as px
 
 
 
 # Read in data
-df = pd.read_excel('protein_evo.xlsx')[['Variants','Fitness']]
+df = pd.read_excel('../protein_evo.xlsx')[['Variants','Fitness']]
 X = df['Variants'].str.split('',expand=True).iloc[:,1:5]
 X.columns = ['loc' + str(i+1) for i in range(4)]
 y = df[['Fitness']]
@@ -59,14 +60,14 @@ X_pool = scaler.transform(X_pool)
 y_pool = copy.deepcopy(y).to_numpy()
 
 # Randomly select 10 instances as initial samples
-random.seed(10)
+np.random.seed(222)
 training_idx = np.random.choice(len(X_pool),100, replace=False)
 X_train = X_pool[training_idx,:]
 y_train = y_pool[training_idx]
 np.max(y_train)
 
-# training_data = pd.concat([X_int.iloc[training_idx,:],y_train], axis=1)
-# training_data.to_csv('training.csv', ',', index=False)
+training_data = pd.concat([X_int.iloc[training_idx,:].reset_index(drop=True),pd.DataFrame(y_train)], axis=1)
+training_data.to_csv('training.csv', ',', index=False)
     
 # Put remaining instances into a pool
 # X_pool = X_pool.drop(training_idx, axis=0)
@@ -74,34 +75,34 @@ np.max(y_train)
 X_pool = np.delete(X_pool, training_idx, axis=0)
 y_pool = np.delete(y_pool, training_idx)
 
-# X_int.drop(training_idx).to_csv('init_pool_X.csv',",",index=False)
-# init_pool = pd.concat([X_int.drop(training_idx),y_pool], axis=1)
-# init_pool.to_csv('init_pool.csv',",",index=False)
+X_int.drop(training_idx).to_csv('init_pool_X.csv',",",index=False)
+init_pool = pd.concat([X_int.drop(training_idx).reset_index(drop=True),pd.DataFrame(y_pool)], axis=1)
+init_pool.to_csv('init_pool.csv',",",index=False)
 
 
 
 # Model initialization
-kernel = Matern(length_scale=1.0)
+kernel = Matern(length_scale=1.0, length_scale_bounds=(1e-8, 1e5))
+                
 regressor = GaussianProcessRegressor(kernel = kernel)
 optimizer = BayesianOptimizer(
     estimator = regressor,
     X_training = X_train,
     y_training = y_train.reshape(-1),
-    query_strategy = max_EI)
+    query_strategy = max_UCB)
 
 _, y_max = optimizer.get_max()
 y_max
 
-batch_size = 100
+batch_size = 50
 query_idx, X_query = optimizer.query(X_pool, n_instances = batch_size)
 utilities = optimizer_UCB(optimizer, X_pool)
+utilities[query_idx]
 
 np.max(utilities)
 np.min(utilities)
 
 y_query = y_pool[query_idx]
-# X_pool = X_pool.drop(query_idx, axis=0)
-# y_pool = y_pool.drop(query_idx, axis=0)
 X_pool = np.delete(X_pool, query_idx, axis=0)
 y_pool = np.delete(y_pool, query_idx)
 
@@ -113,7 +114,9 @@ y_max
 
 
 
-sns.histplot(utilities)
+# sns.histplot(utilities)
+fig = px.histogram(utilities)
+fig.show()
 
 
 tsne = TSNE(n_components = 2, random_state = 0)
