@@ -27,7 +27,10 @@ import plotly.graph_objects as go
 
 
 def main():
+    st.set_page_config(layout="wide")
+
     st.title("Active learning hub")
+    c1, c2, c3 = st.beta_columns((1,2,2))
     session_state = SessionState.get(data_ready = False, model_init=False, batch_size = 1, pool = None)
     
     st.sidebar.markdown('## Experiment settings')
@@ -65,9 +68,11 @@ def main():
         y_training = exp_hist_df[['Objective']]
 
         st.sidebar.info('Experiments uploaded!')
-        show_hist = st.checkbox('Show evaluated experiments')
-        if show_hist:
-            AgGrid(exp_hist_df, editable=True)
+        with c1:
+            show_hist = st.checkbox('Show evaluated experiments')
+            if show_hist:
+                # AgGrid(exp_hist_df, editable=True)
+                st.dataframe(exp_hist_df)
         session_state.exp_hist = X_training
     else:
         st.sidebar.warning('Please upload initial experiments')
@@ -103,7 +108,6 @@ def main():
     
     
     # ------------------- Upload available pool ------------------
-    
     exp_pool_file = st.sidebar.file_uploader('Upload a .csv file containing unlabeled instances', type = ['txt','csv'])
     if exp_pool_file is not None:
         exp_pool_df = pd.read_csv(exp_pool_file, names = param_names, header = 0, index_col=False)
@@ -124,14 +128,13 @@ def main():
     if session_state.model_init == True and session_state.pool is not None:    
         # Get suggested designs
         # session_state.batch_size = st.sidebar.number_input('Batch size',1)
-        session_state.batch_size = st.slider('Batch size', 1, 100)
-        st.markdown('#### Size of next batch:' + str(session_state.batch_size))
         
         
+        with c1:
+            session_state.batch_size = st.slider('Batch size', 1, 100)
+            st.markdown('#### Size of next batch:' + str(session_state.batch_size))
+            get_design = st.button('Get a new batch of designs')
         
-        
-
-        get_design = st.button('Get a new batch of designs')
         
         if get_design:
             # st.write('HHHH')
@@ -150,12 +153,15 @@ def main():
             
             # fig_surf = go.Figure(data=[go.Surface(z=new_df_reduced.Utility,x = new_df_reduced.PC1, y=new_df_reduced.PC2)])
             # st.plotly_chart(fig_surf)
-            
+            # with c1: 
             fig_1 = px.scatter_3d(new_df_reduced, x='PC1', y='PC2', z='Utility', color = 'top')
-            st.plotly_chart(fig_1)
+            with c2:
+                st.plotly_chart(fig_1, width =100)
             
-            new_batch_df = new_df_reduced.loc[new_df_reduced['top']==True,:]
             
-            AgGrid(new_batch_df, editable=True)
+            new_batch_idx = new_df_reduced.loc[new_df_reduced['top']==True,:].index.to_list()
+            new_batch_df = session_state.pool.iloc[new_batch_idx,:].join(utilities).drop(columns = ['top'])
+            with c3:
+                st.dataframe(new_batch_df)
             
 main()
