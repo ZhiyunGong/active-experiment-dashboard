@@ -28,14 +28,22 @@ import plotly.graph_objects as go
 
 def main():
     st.set_page_config(layout="wide")
+    session_state = SessionState.get(data_ready = False, model_init=False, batch_size = 1, 
+                                     pool = None, curr_perf = 0, next_batch = None, show_design = False)
 
     st.title("Active learning hub")
     c1, c2, c3 = st.beta_columns((1,2,2))
-    session_state = SessionState.get(data_ready = False, model_init=False, batch_size = 1, pool = None)
     
     st.sidebar.markdown('## Experiment settings')
     task_type = st.sidebar.selectbox('Task type:', ['Objective optimization', 'Regression model training'])
+    c1.subheader('Performing '+task_type)
     
+
+    if task_type == 'Objective optimization':
+        c1.subheader('Current best objective: ' + str(session_state.curr_perf))
+        st.sidebar.selectbox('Utility function',['Expected Improvement',
+                                                 'Upper Confidence Bound',
+                                                 'Probability of Improvement'])
 
     
     # ---------------- Specify the number of parameters ----------------------
@@ -66,14 +74,13 @@ def main():
         exp_hist_df = pd.read_csv(exp_history.name,names = param_names + ['Objective'],  header = 0, index_col=False)
         X_training = exp_hist_df[param_names]
         y_training = exp_hist_df[['Objective']]
+        session_state.exp_hist = exp_hist_df
 
         st.sidebar.info('Experiments uploaded!')
         with c1:
-            show_hist = st.checkbox('Show evaluated experiments')
-            if show_hist:
-                # AgGrid(exp_hist_df, editable=True)
-                st.dataframe(exp_hist_df)
-        session_state.exp_hist = X_training
+            # show_hist = st.checkbox('Show evaluated experiments')
+            # if show_hist:
+                hist_tbl = st.dataframe(session_state.exp_hist)
     else:
         st.sidebar.warning('Please upload initial experiments')
     
@@ -85,6 +92,7 @@ def main():
             
     #------------------ Initialize corresponding models --------------------------
         if task_type == 'Objective optimization':
+            # session_state.curr_perf = np.max(session_state.exp_hist[['Objective']])
             scaler = MinMaxScaler().fit(X_training)
             X_training = scaler.transform(X_training)
             
@@ -94,30 +102,21 @@ def main():
         
             BO_model = BayesianOptimizer(
                 estimator = regressor,
-                query_strategy = max_UCB,
                 X_training = X_training,
                 y_training = y_training.to_numpy().reshape(-1))
-            st.info("Bayesian Optimizer")
+            # st.info("Bayesian Optimizer")
             session_state.model = BO_model
-
-        # session_state.model.teach(X_training, y_training.to_numpy().reshape(-1))
-        # session_state.model = BO_model
-        st.write(session_state.model.get_max())
-        session_state.model_init = True
-        st.info('Model initialized')
+            session_state.model_init = True
+            session_state.curr_perf = BO_model.get_max()[1]
+            st.info('Model initialized')
     
     
     # ------------------- Upload available pool ------------------
     exp_pool_file = st.sidebar.file_uploader('Upload a .csv file containing unlabeled instances', type = ['txt','csv'])
     if exp_pool_file is not None:
         exp_pool_df = pd.read_csv(exp_pool_file, names = param_names, header = 0, index_col=False)
-        # norm_pool = st.sidebar.checkbox("Need to be Normalized?")
-        # if norm_pool ==True:
-        #     scaler = MinMaxScaler().fit(exp_pool_df)
-        #     exp_pool_df = scaler.transform(exp_pool_df)
-        #     st.sidebar.info("Data normalized!")
+
         st.sidebar.info('Pool uploaded! Containing ' + str(len(exp_pool_df))+' instances')
-        # st.write(exp_pool_df) 
         session_state.pool = exp_pool_df
 
     if exp_pool_file is not None and exp_history is not None:
@@ -125,43 +124,68 @@ def main():
     
    
      
-    if session_state.model_init == True and session_state.pool is not None:    
-        # Get suggested designs
-        # session_state.batch_size = st.sidebar.number_input('Batch size',1)
+    # if session_state.model_init == True and session_state.pool is not None:    
         
         
-        with c1:
-            session_state.batch_size = st.slider('Batch size', 1, 100)
-            st.markdown('#### Size of next batch:' + str(session_state.batch_size))
-            get_design = st.button('Get a new batch of designs')
-        
-        
-        if get_design:
-            # st.write('HHHH')
-            # query_idx, X_query = BO_model.query(exp_pool_df, n_instances = session_state.batch_size)
-            # st.write(X_query)
-            scaler = MinMaxScaler().fit(session_state.pool)
-            exp_pool_df_norm = scaler.transform(session_state.pool)
+    with c1:
+        session_state.batch_size = st.slider('Batch size', 1, 100)
+        st.markdown('#### Size of next batch:' + str(session_state.batch_size))
+        get_design = st.button('Get a new batch of designs')
+    
+    
+    if get_design:
+        session_state.show_design = True
+        scaler = MinMaxScaler().fit(session_state.pool)
+        exp_pool_df_norm = scaler.transform(session_state.pool)
 
-            utilities = pd.DataFrame(optimizer_UCB(session_state.model, exp_pool_df_norm),columns=['Utility']).sort_values(by=['Utility'], ascending=False).round(4)
-            util_cutoff = utilities['Utility'].to_list()[session_state.batch_size]
-            utilities['top'] = utilities['Utility'] >= util_cutoff
-            # utilities_sorted = utilities.iloc[:session_state.batch_size,:]
-            # new_df = session_state.pool.join(utilities_sorted, how='right')
-            pca = PCA(n_components=2)
-            new_df_reduced = pd.DataFrame(pca.fit_transform(session_state.pool),columns=['PC1','PC2']).join(utilities, how='right')
+        utilities = pd.DataFrame(optimizer_UCB(session_state.model, exp_pool_df_norm),columns=['Utility']).sort_values(by=['Utility'], ascending=False).round(4)
+        util_cutoff = utilities['Utility'].to_list()[session_state.batch_size]
+        utilities['top'] = utilities['Utility'] > util_cutoff
+        # st.write('HHHH')
+        # query_idx, X_query = BO_model.query(exp_pool_df, n_instances = session_state.batch_size)
+        # st.write(X_query)
+        pca = PCA(n_components=2)
+        new_df_reduced = pd.DataFrame(pca.fit_transform(session_state.pool),columns=['PC1','PC2']).join(utilities, how='right')
+        
+        session_state.util_plot = px.scatter_3d(new_df_reduced, x='PC1', y='PC2', z='Utility', color = 'top')
+        
+        
+        new_batch_idx = new_df_reduced.loc[new_df_reduced['top']==True,:].index.to_list()
+        new_batch_df = session_state.pool.iloc[new_batch_idx,:].join(utilities).drop(columns = ['top'])
+        session_state.next_batch = new_batch_df
+        session_state.next_batch_idx = new_batch_idx
+    if session_state.show_design:
+       
+        with c2:
+            st.plotly_chart(session_state.util_plot, use_container_width=True)
+        
+        
+
+        with c3:
+            st.subheader('Next batch experiment designs')
             
-            # fig_surf = go.Figure(data=[go.Surface(z=new_df_reduced.Utility,x = new_df_reduced.PC1, y=new_df_reduced.PC2)])
-            # st.plotly_chart(fig_surf)
-            # with c1: 
-            fig_1 = px.scatter_3d(new_df_reduced, x='PC1', y='PC2', z='Utility', color = 'top')
-            with c2:
-                st.plotly_chart(fig_1, width =100)
             
+            st.dataframe(session_state.next_batch)
+            new_obj_str = st.text_input('Objective values for the new batch of experiments:')
             
-            new_batch_idx = new_df_reduced.loc[new_df_reduced['top']==True,:].index.to_list()
-            new_batch_df = session_state.pool.iloc[new_batch_idx,:].join(utilities).drop(columns = ['top'])
-            with c3:
-                st.dataframe(new_batch_df)
+
+            update = st.button('Update evaluated and unlabeled pool')
+            if update:
+                new_obj_list = list(map(float, new_obj_str.split(',')))
+                new_exp = pd.concat([session_state.next_batch.iloc[:,:num_params],pd.DataFrame(new_obj_list, index = session_state.next_batch_idx, columns=['Objective'])],axis=1).reset_index(drop=True)
+                session_state.exp_hist = pd.concat([session_state.exp_hist,new_exp])
+                hist_tbl.add_rows(new_exp)
+                session_state.pool = session_state.pool.drop(session_state.next_batch_idx, axis=0)
+                session_state.next_batch = None
+                session_state.next_batch_idx = None
+                session_state.model.teach(new_exp.iloc[:,:num_params],new_exp[['Objective']].to_numpy().reshape(-1))
+                session_state.curr_perf = session_state.model.get_max()[1]
+                session_state.show_design =False
+                # st.write(new_exp)
+                st.write(len(session_state.exp_hist))
+                st.write(len(session_state.pool))
+                st.write(session_state.curr_perf)
+
+            # st.write(new_obj_list)
             
 main()
