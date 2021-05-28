@@ -4,7 +4,7 @@
 * **Team members**:
   * Contact person: zhiyung@andrew.cmu.edu
 
-* **Track**:  Narrative 
+* **Track**:  Application 
 
 ## Work distribution
 
