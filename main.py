@@ -104,7 +104,7 @@ def main():
     session_state = SessionState.get(data_ready = False, model_init=False, batch_size = 1, exp_hist =None,
                                       pool = None, curr_perf = 0.0, new_batch = None, show_design = False, no_iter = 0)
 
-    st.title("Active learning hub")
+    st.title("Bayesian Optimization and Active Regressor Dashboard")
     c1, c2, c3 = st.beta_columns((1,2,2))
     
     st.sidebar.markdown('## Experiment settings')
