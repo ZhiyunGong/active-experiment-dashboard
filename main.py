@@ -21,62 +21,88 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 from sklearn.decomposition import PCA
 from sklearn.metrics import r2_score
+from sklearn.model_selection import cross_val_score
 
 import plotly.express as px
 import plotly.graph_objects as go
 
 
-def GP_regression_std(regressor, X):
-    _, std = regressor.predict(X, return_std=True)
-    query_idx = np.argmax(std)
-    return query_idx, X[query_idx]
 
 # Teach model on new data
 def teach_model(model,X,y):
     model.teach(X,y)
     
-    
-# Get new designs
+
+# Get new designs for Bayesian Optimizer
 def get_design_BO(model, pool, batch_size):
     scaler = MinMaxScaler().fit(pool)
     exp_pool_df_norm = scaler.transform(pool)
 
-    utilities = pd.DataFrame(optimizer_UCB(model, exp_pool_df_norm),columns=['Utility']).sort_values(by=['Utility'], ascending=False).round(4)
+    utilities = pd.DataFrame(optimizer_UCB(model, exp_pool_df_norm),columns=['Utility'],index = pool.index).sort_values(by=['Utility'], ascending=False).round(4)
     util_cutoff = utilities['Utility'].to_list()[batch_size]
-    utilities['top'] = utilities['Utility'] > util_cutoff
+    utilities['top'] = (utilities['Utility'] > util_cutoff).astype(int)
    
     pca = PCA(n_components=2)
-    new_df_reduced = pd.DataFrame(pca.fit_transform(pool),columns=['PC1','PC2']).join(utilities, how='right')
+    new_df_reduced = pd.DataFrame(pca.fit_transform(pool),columns=['PC1','PC2'],index = pool.index).join(utilities, how='right')
     
     # session_state.util_plot = px.scatter_3d(new_df_reduced, x='PC1', y='PC2', z='Utility', color = 'top')
-    util_plot = px.scatter(new_df_reduced, x='PC1', y='PC2', color = 'Utility')
-
-    new_batch_idx = new_df_reduced.loc[new_df_reduced['top']==True,:].index.to_list()
-    new_batch_df = pool.iloc[new_batch_idx,:].join(utilities).drop(columns = ['top'])
+    util_plot = px.scatter(new_df_reduced, x='PC1', y='PC2', color = 'Utility',symbol  = 'top')
+    new_batch_idx = utilities.iloc[:batch_size,:].index.to_list()
+    
+    # new_batch_idx = new_df_reduced.loc[new_df_reduced['top']==True,:].index.to_list()
+    new_batch_df = pool.loc[new_batch_idx,:].join(utilities).drop(columns = ['top'])
 
     return util_plot, new_batch_idx, new_batch_df
 
 
+def GP_std(model, pool):
+    _,std = model.predict(pool, return_std =True)
+    return std
+
+# Get new designs for active regressor
+def get_design_AL(model, pool, batch_size):
+    # print(pool.index.to_list()[:5])
+    scaler = MinMaxScaler().fit(pool)
+    exp_pool_df_norm = scaler.transform(pool)
+    stds = pd.DataFrame(GP_std(model, pool),columns=['Uncertainty'],index = pool.index).sort_values(by=['Uncertainty'], ascending=False).round(4)
+    
+    pca = PCA(n_components=2)
+    new_df_reduced = pd.DataFrame(pca.fit_transform(pool),columns=['PC1','PC2'],index = pool.index).join(stds, how='right')
+    
+    util_plot = px.scatter(new_df_reduced, x='PC1', y='PC2', color = 'Uncertainty')
+    new_batch_idx = stds.iloc[:batch_size,:].index.to_list()
+    
+    new_batch_df = pool.loc[new_batch_idx,:].join(stds)
+    return util_plot, new_batch_idx, new_batch_df
+    
+
+
 
 # Update evaluated data and unevaluated pool
-def update_data(new_exp,new_batch_idx, exp_hist, pool, model):
+def update_data(new_exp,new_batch_idx, exp_hist, pool, model, task_type):
     
     exp_hist = pd.concat([exp_hist,new_exp]).reset_index(drop=True)
-    # hist_tbl.add_rows(new_exp)
     pool = pool.drop(new_batch_idx, axis=0)
 
     
     #Fit model
     teach_model(model, new_exp.iloc[:,:-1],new_exp[['Objective']].to_numpy().reshape(-1))
     
-    return exp_hist, pool, model.get_max()[1]
+    # Get new performance metric
+    if task_type == 'Objective optimization':
+        curr_perf = model.get_max()[1]
+        
+    if task_type == 'Regression model training':
+        y_pred, y_std = model.predict(model.X_training, return_std=True)
+        curr_perf = r2_score(model.y_training, y_pred)
+    return exp_hist, pool, curr_perf
 
 
 
 def main():
     st.set_page_config(layout="wide")
     session_state = SessionState.get(data_ready = False, model_init=False, batch_size = 1, exp_hist =None,
-                                      pool = None, curr_perf = 0, new_batch = None, show_design = False)
+                                      pool = None, curr_perf = 0.0, new_batch = None, show_design = False, no_iter = 0)
 
     st.title("Active learning hub")
     c1, c2, c3 = st.beta_columns((1,2,2))
@@ -95,9 +121,7 @@ def main():
         num_params = st.sidebar.number_input('Number of design parameters:',1)
         
     if task_type == 'Regression model training':
-        c1.subheader('Current r^2: ' + str(session_state.curr_perf))
-        reg_type = st.sidebar.selectbox('Model type',['Linear regressor',
-                                            'Random forest regressor'])
+
         num_params = st.sidebar.number_input('Number of independent variables:',2)
 
 
@@ -157,22 +181,22 @@ def main():
                 + WhiteKernel(noise_level=1, noise_level_bounds=(1e-10, 1e+1))
             
             AL_model = ActiveLearner(
-                estimator=GaussianProcessRegressor(kernel=kernel),
-                query_strategy=GP_regression_std,
-                X_training = X_training,
-                y_training = y_training.to_numpy().reshape(-1)
+                estimator=GaussianProcessRegressor(kernel=kernel)
                 )
+            
+            
+            teach_model(AL_model, X = X_training,
+                y = y_training.to_numpy().reshape(-1))
             
             session_state.model = AL_model
             session_state.model_init = True
             y_pred, y_std = AL_model.predict(X_training, return_std=True)
             
             session_state.curr_perf = r2_score(y_training, y_pred)
-                
+            st.info('Model initialized')
                 
         # ---------------- Optimization ------------------
         if task_type == 'Objective optimization':
-            # session_state.curr_perf = np.max(session_state.exp_hist[['Objective']])
             scaler = MinMaxScaler().fit(X_training)
             X_training = scaler.transform(X_training)
             
@@ -184,7 +208,6 @@ def main():
                 estimator = regressor)
             teach_model(BO_model, X = X_training,
                 y = y_training.to_numpy().reshape(-1))
-            # st.info("Bayesian Optimizer")
             session_state.model = BO_model
             session_state.model_init = True
             session_state.curr_perf = BO_model.get_max()[1]
@@ -204,11 +227,19 @@ def main():
     
     if get_design:
         # print(len(session_state.pool))
-        
-        session_state.util_plot, session_state.new_batch_idx, session_state.new_batch = get_design_BO(session_state.model,
+        if task_type == 'Objective optimization':
+            session_state.util_plot, session_state.new_batch_idx, session_state.new_batch = get_design_BO(session_state.model,
+                                                               session_state.pool, 
+                                                               session_state.batch_size)  
+        if task_type == 'Regression model training':
+            session_state.util_plot, session_state.new_batch_idx, session_state.new_batch = get_design_AL(session_state.model,
                                                                session_state.pool, 
                                                                session_state.batch_size)
+            print(len(session_state.new_batch))
         session_state.show_design = True
+    
+        
+        
         
         
         
@@ -232,32 +263,36 @@ def main():
             if update:
                 new_obj_list = list(map(float, new_obj_str.split(',')))
                 new_exp = pd.concat([session_state.new_batch.iloc[:,:num_params],pd.DataFrame(new_obj_list, index = session_state.new_batch_idx, columns=['Objective'])],axis=1).reset_index(drop=True)
-                session_state.exp_hist, session_state.pool, session_state.curr_perf =update_data(new_exp,session_state.new_batch_idx, session_state.exp_hist, 
-                                                     session_state.pool, session_state.model)
-                # session_state.exp_hist = pd.concat([session_state.exp_hist,new_exp]).reset_index(drop=True)
-                # # hist_tbl.add_rows(new_exp)
-                # session_state.pool = session_state.pool.drop(session_state.new_batch_idx, axis=0)
+                session_state.exp_hist, session_state.pool, session_state.curr_perf = update_data(new_exp,session_state.new_batch_idx, session_state.exp_hist, 
+                                                     session_state.pool, session_state.model, task_type)
+
                 session_state.new_batch = None
                 session_state.new_batch_idx = None
-                
-                # #Fit model
-                # teach_model(session_state.model, new_exp.iloc[:,:num_params],new_exp[['Objective']].to_numpy().reshape(-1))
-                # # session_state.model.teach()
-                # session_state.curr_perf = session_state.model.get_max()[1]
-                st.write(len(session_state.exp_hist))
-                print('After update'+str(len(session_state.pool)))
-                st.write(len(session_state.pool))
-                st.write(session_state.curr_perf)
+                session_state.no_iter += 1
+
                 session_state.show_design =False
 
 
-            # st.write(new_obj_list)
     with c1:
         hist_tbl = st.dataframe(session_state.exp_hist)
 
-    if task_type == 'Objective optimization':
+        if task_type == 'Objective optimization':
+            c1.subheader('Current best objective after' + str(session_state.no_iter) +' iterations: ' + str(session_state.curr_perf))
+        if task_type == 'Regression model training':
+            c1.subheader('Current r^2 after ' + str(session_state.no_iter) +' iterations: ' +  str(round(session_state.curr_perf,4)))
         
-            c1.subheader('Current best objective: ' + str(session_state.curr_perf))
+        reset = st.button('Reset experiment')
+        if reset:
+            session_state.data_ready = False 
+            session_state.model_init=False
+            session_state.batch_size = 1
+            session_state.exp_hist =None
+            session_state.pool = None
+            session_state.curr_perf = 0.0
+            session_state.new_batch = None
+            session_state.show_design = False
+            
+        
 
             
 main()

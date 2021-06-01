@@ -62,7 +62,7 @@ y_pool = copy.deepcopy(y).to_numpy()
 # Randomly select 10 instances as initial samples
 np.random.seed(222)
 training_idx = np.random.choice(len(X_pool),100, replace=False)
-X_train = X_pool[training_idx,:]
+X_train = X_pool.iloc[training_idx,:].to_numpy()
 y_train = y_pool[training_idx]
 np.max(y_train)
 
@@ -70,9 +70,9 @@ training_data = pd.concat([X_int.iloc[training_idx,:].reset_index(drop=True),pd.
 training_data.to_csv('training.csv', ',', index=False)
     
 # Put remaining instances into a pool
-# X_pool = X_pool.drop(training_idx, axis=0)
+X_pool = X_pool.drop(training_idx, axis=0)
 # y_pool = y_pool.drop(training_idx, axis=0)
-X_pool = np.delete(X_pool, training_idx, axis=0)
+# X_pool = np.delete(X_pool, training_idx, axis=0)
 y_pool = np.delete(y_pool, training_idx)
 
 X_int.drop(training_idx).to_csv('init_pool_X.csv',",",index=False)
