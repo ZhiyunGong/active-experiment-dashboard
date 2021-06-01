@@ -8,7 +8,7 @@
 
 ## Work distribution
 
-Update towards the end of the project.
+N/A
 
 ## Deliverables
 
