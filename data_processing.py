@@ -115,6 +115,10 @@ X_pool = df2_pool.drop('Objective',axis=1)
 X_pool.to_csv('buffer_init_pool_X.csv',',',index=False)
 y_pool = df2_pool[['Objective']]
 
+pca = PCA(n_components=2)
+comps = pca.fit_transform(X_pool)
+pd.DataFrame(comps).plot().scatter()
+
 def GP_regression_std(regressor, X):
     _, std = regressor.predict(X, return_std=True)
     query_idx = np.argmax(std)

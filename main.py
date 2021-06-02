@@ -25,7 +25,7 @@ from sklearn.model_selection import cross_val_score
 
 import plotly.express as px
 import plotly.graph_objects as go
-
+import matplotlib.pyplot as plt
 
 
 # Teach model on new data
@@ -43,7 +43,7 @@ def get_design_BO(model, pool, batch_size):
     # utilities['top'] = (utilities['Utility'] > util_cutoff).astype(int)
    
     pca = PCA(n_components=2)
-    new_df_reduced = pd.DataFrame(pca.fit_transform(pool),columns=['PC1','PC2'],index = pool.index).join(utilities, how='right')
+    new_df_reduced = pd.DataFrame(pca.fit_transform(pool),columns=['PC1','PC2'],index = pool.index).join(utilities, how='right').reset_index(drop=True)
     print(len(new_df_reduced))
     # session_state.util_plot = px.scatter_3d(new_df_reduced, x='PC1', y='PC2', z='Utility', color = 'top')
     util_plot = px.scatter(new_df_reduced, x='PC1', y='PC2', color = 'Utility')
@@ -65,8 +65,7 @@ def get_design_AL(model, pool, batch_size):
     stds = pd.DataFrame(GP_std(model, pool),columns=['Uncertainty'],index = pool.index).sort_values(by=['Uncertainty'], ascending=False).round(4)
     
     pca = PCA(n_components=2)
-    new_df_reduced = pd.DataFrame(pca.fit_transform(pool),columns=['PC1','PC2'],index = pool.index).join(stds, how='right')
-    print(new_df_reduced.head())
+    new_df_reduced = pd.DataFrame(pca.fit_transform(pool),columns=['PC1','PC2'],index = pool.index).join(stds, how='right').reset_index(drop=True)
     util_plot = px.scatter(new_df_reduced, x='PC1', y='PC2', color = 'Uncertainty')
     new_batch_idx = stds.iloc[:batch_size,:].index.to_list()
     
@@ -106,7 +105,7 @@ def main():
     session_state = SessionState.get(data_ready = False, model_init=False, batch_size = 1, exp_hist =None,
                                       pool = None, curr_perf = 0.0, new_batch = None, show_design = False, no_iter = 0)
 
-    st.title("Bayesian Optimization and Active Regressor Dashboard")
+    st.title("Bayesian Optimization and Active Regression Dashboard")
     c1, c2, c3 = st.beta_columns((1,2,2))
     
     st.sidebar.markdown('## Experiment settings')
@@ -240,7 +239,6 @@ def main():
        
         with c2:
             st.plotly_chart(session_state.util_plot, use_container_width=True)
-        
         
 
         with c3:
