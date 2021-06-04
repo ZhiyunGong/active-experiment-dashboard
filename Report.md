@@ -47,11 +47,17 @@ The surrogate model is a GP model with a Matern kernel. The Upper Confidence Bou
 * **User Interface Design**
 The user interface consists of two parts: the sidebar for settings, and the main body for performing the iterative model training or optimization. 
 
-In the sidebar, the user will first select whether they want to perform “Regression model training” or “Objective optimization”. Then the text files containing evaluated experiments and a pool of unlabeled instances need to be uploaded. After uploading both files and clicking on the “Fit the model” button, the user can move to the main body to start the training or optimization.
+In the sidebar, the user will first select whether they want to perform “Regression model training” or “Objective optimization”. Then the text files containing evaluated experiments and a pool of unlabeled instances need to be uploaded. Finally, the “Fit the model” button will calls corresponding functions to initialize the models using the uploaded data.
 
-In the main body, there are three columns: **1) Left:** batch size selection, all labeled data that has been learned by the model, current performance (r<sup>2</sup> or maximum objective); **2) Middle:** a scatter plot of all data instances in the unlabeled pool projected on the first 2 principal components, colored according to their utility (for Bayesian Optimization) or uncertainty (for Active Regression) level; **3) Right:** a new batch of parameter designs to be evaluated, text input for the objective values of the new experiments, an update button.
+In the main body, there are three columns: **1) Left:** batch size selection, all labeled data that has been learned by the model, current performance (r<sup>2</sup> or maximum objective); **2) Middle:** a scatter plot of all data instances in the unlabeled pool projected on the first 2 principal components, colored according to their utility (for Bayesian Optimization) or uncertainty (for Active Regression) level; **3) Right:** a new batch of parameter designs to be evaluated, text input for the objective values of the new experiments, a button for retraining the model and updating the labeled and unlabeled pool.
 
 ![User interface](https://github.com/CMU-IDS-2021/fp--zhiyun/blob/main/imgs/app_regression.png)  
+
+* **Workflow**
+While performing the tasks using the app, the users will follow the flow in the diagram below. The task type and data need to be specified and uploaded in the sidebar before beginning the model training or optimization process. Once the task has begun, the user will be in the loop of the iterative training/optimization process with 3 steps. They can request a certain number of new parameter designs, enter the objective values for the new batch, update the model and data pool, and decide whether to performance more experiments according to the current performance of the model.
+
+
+
 ## Discussion
 
 ## Future Work
