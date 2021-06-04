@@ -44,7 +44,14 @@ The regression model used in this app is a Gaussian Process (GP) model with a Ra
 The surrogate model is a GP model with a Matern kernel. The Upper Confidence Bound utility function is applied, and instances of the batch size specified by the user with the highest UCB scores are returned for further evaluation. The performance measurement in this case is simply the highest objective value seen so far in the evaluated experiments.
 
 ## Results
+* **User Interface Design**
+The user interface consists of two parts: the sidebar for settings, and the main body for performing the iterative model training or optimization. 
 
+In the sidebar, the user will first select whether they want to perform “Regression model training” or “Objective optimization”. Then the text files containing evaluated experiments and a pool of unlabeled instances need to be uploaded. After uploading both files and clicking on the “Fit the model” button, the user can move to the main body to start the training or optimization.
+
+In the main body, there are three columns: **1) Left:** batch size selection, all labeled data that has been learned by the model, current performance (r<sup>2</sup> or maximum objective); **2) Middle:** a scatter plot of all data instances in the unlabeled pool projected on the first 2 principal components, colored according to their utility (for Bayesian Optimization) or uncertainty (for Active Regression) level; **3) Right:** a new batch of parameter designs to be evaluated, text input for the objective values of the new experiments, an update button.
+
+![User interface](https://github.com/CMU-IDS-2021/fp--zhiyun/blob/main/imgs/app_regression.png)  
 ## Discussion
 
 ## Future Work
