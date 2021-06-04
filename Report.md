@@ -139,6 +139,8 @@ While performing the tasks using the app, the users will follow the flow in the 
 ![Workflow Diagram](https://github.com/CMU-IDS-2021/fp--zhiyun/blob/main/imgs/workflow.png)
 
 
+
+
 * **Performance**
 In order to test the app, I performance Bayesian Optimization on the protein directed
 evolution dataset to find the protein mutants with higher f itness and Active Regression
@@ -151,6 +153,47 @@ queried. It can be seen that as performing more experiments according to the
 suggestions by the BO algorithm, the best objective value has increased from 1.90 to
 4.43 after 5 batches.
 
+![Bayesian Optimization Performance](https://github.com/CMU-IDS-2021/fp--zhiyun/blob/main/imgs/tbl1.png)
+
+The regression model training was performed on the buffer composition dataset. The
+model was first initiali zed on 50 randomly selected instances, and there were 50 in
+each of the subsequent batche s . T o examine the generalization ability of the trained
+model, after each iteration I tested the current model on all the other instances that
+have not been l earned by the model and recorded its r<sup>2</sup> as testing performance. As
+shown in the following table, we can see after 5 iterations of queries (300 experiment
+evaluations), the model reached ~0.7 r<sup>2</sup> on both training and testing sets , suggesting
+decent generaliza tion ability and accuracy.
+
+![AR performance](https://github.com/CMU-IDS-2021/fp--zhiyun/blob/main/imgs/tbl2.png)
+
 ## Discussion
 
+From the
+preliminary testing results , it is shown that both objective optimization and regression model training tasks can be performed easily using this application, and the
+performances are comparable to those re p orted in the previous studies. W hile testing
+I noticed that the implementa tion by the modAL pac kage simply returns the top n
+batch size instances in the unlabeled pool after sorting t hem by utility or uncertainty
+and the scatter plo t showe d that they usually form a cluster in the design space,
+suggesting they a re very similar. I think thi s behavior may cause the batch experiments
+to become less eff icient when the pr ovided pool is dense since there is not enough
+divers ity in e ach batch and it may over e xpl oit or explore a certain reg ion in the design
+space by querying a cluster of very similar designs
+
 ## Future Work
+
+
+In the future, I would like to make the
+BOARD support Membership Query Synthesis
+query strategy as well, so that th e users do not h ave to generate a poo l of all possible
+design s bu t rather only need to sp ecify the constrai nts for the pa rameters. In this way,
+it mak es mo re sense when there are continuous parameter s such that the users do
+not need to discre tize them and w o rr y ab out the d ensit y of the pool they created. Also ,
+when suggesting the new batch of experiments, I may want to add a function such that
+the u ser can specify a diversity threshold so that designs in di fferent regions with
+relatively high utility u ncertain ty can be included in one batch, a nd hence help
+incre a se the efficiency of the training o r optimization process. The visualization of
+utility/ uncertainty in the unlabeled p o ol can a lso be further improved, in which the
+new batch of expe riments are highlighted, or the user can pick points to ad d to the
+new batch from the plot. Finally, for the regre ssion model training task, it would be
+very us eful to fi nd a way to al low the users to save the trained model locally and reuse
+it in the future.
