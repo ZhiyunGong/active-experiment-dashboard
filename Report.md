@@ -56,7 +56,7 @@ In the main body, there are three columns: **1) Left:** batch size selection, al
 * **Workflow**
 While performing the tasks using the app, the users will follow the flow in the diagram below. The task type and data need to be specified and uploaded in the sidebar before beginning the model training or optimization process. Once the task has begun, the user will be in the loop of the iterative training/optimization process with 3 steps. They can request a certain number of new parameter designs, enter the objective values for the new batch, update the model and data pool, and decide whether to performance more experiments according to the current performance of the model.
 
-
+![Workflow Diagram](https://github.com/CMU-IDS-2021/fp--zhiyun/blob/main/imgs/workflow.png)
 
 ## Discussion
 
