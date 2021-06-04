@@ -9,6 +9,8 @@
 
 * **Track**:  Application 
 
+## Application interface
+![image](https://github.com/CMU-IDS-2021/fp--zhiyun/blob/main/imgs/app_regression.png)
 ## Work distribution
 
 N/A
