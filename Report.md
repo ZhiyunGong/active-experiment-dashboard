@@ -28,6 +28,12 @@ In Bayesian Optimization, Gaussian Process is the commonly used surrogate model 
 
 
 ## Related Work
+* **Data**
+1.	Protein Directed Evolution
+In the study published by Wu et al., , the researchers aimed to find the mutant of the protein GB1 with the highest “fitness” (a measurement of the protein’s stability and functionality) by mutating the amino acid at four positions in its protein sequence. There are 20 possible amino acids at each locus in theory, but because of experimental constraints, the researchers were not able to produce all 204 variants, but only 149,361 of them. The fitness scores for the mutant are relative to the original wild-type protein, meaning only those with fitness scores> 1 are considered beneficial. And it was found that only 2.4% of the mutants are beneficial.
+
+2.	Buffer Composition 
+A cell-free system is an in vitro system allowing researchers to examine biological processes. While performing the experiments using this tool, the buffer composition can cause variation in the production efficiency of the system. In the study by Borkowski et al., they aimed to optimize the yield of a specific protein by tuning the concentration of 11 different substances in the buffer and to train a regression model in an active learning fashion to predict the yield of specific buffer compositions.
 
 ## Methods
 
