@@ -25,8 +25,6 @@ from sklearn.model_selection import cross_val_score
 
 import plotly.express as px
 import plotly.graph_objects as go
-import matplotlib.pyplot as plt
-
 
 # Teach model on new data
 def teach_model(model,X,y):
