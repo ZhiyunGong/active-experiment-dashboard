@@ -4,12 +4,6 @@ Created on Wed May 19 14:02:34 2021
 
 @author: Zhiyun Gong
 """
-class BayesianOptimizer(ActiveLearner):
-    def get_max(self):
-        pred, _ = self.estimator.predict(self.X_training, return_std=True)
-        idx = np.argmax(pred)
-        return self.X_training[idx], pred[idx]
-
 
 
 import streamlit as st
@@ -23,8 +17,15 @@ from modAL.acquisition import optimizer_UCB
 from sklearn.gaussian_process.kernels import Matern, RBF, WhiteKernel
 from sklearn.metrics import r2_score
 from sklearn.decomposition import PCA
-
 import plotly.express as px
+
+
+class BayesianOptimizer(ActiveLearner):
+    def get_max(self):
+        pred, _ = self.estimator.predict(self.X_training, return_std=True)
+        idx = np.argmax(pred)
+        return self.X_training[idx], pred[idx]
+
 
 # ------------------- Initialize session state defaults -------------------
 def init_session_state():
