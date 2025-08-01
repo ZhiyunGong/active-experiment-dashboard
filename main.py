@@ -4,6 +4,12 @@ Created on Wed May 19 14:02:34 2021
 
 @author: Zhiyun Gong
 """
+class BayesianOptimizer(ActiveLearner):
+    def get_max(self):
+        pred, _ = self.estimator.predict(self.X_training, return_std=True)
+        idx = np.argmax(pred)
+        return self.X_training[idx], pred[idx]
+
 
 
 import streamlit as st
@@ -11,7 +17,7 @@ from st_aggrid import AgGrid
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
-from modAL.models import BayesianOptimizer, ActiveLearner
+from modAL.models import ActiveLearner
 from sklearn.gaussian_process import GaussianProcessRegressor
 from modAL.acquisition import optimizer_UCB
 from sklearn.gaussian_process.kernels import Matern, RBF, WhiteKernel
