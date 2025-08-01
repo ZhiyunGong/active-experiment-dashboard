@@ -1,6 +1,6 @@
 # CMU Interactive Data Science Final Project
 
-* **Online URL**: https://share.streamlit.io/cmu-ids-2021/fp--zhiyun/main/main.py
+* **[Access the app here!]()**
 
 * **Video Demonstration**: https://drive.google.com/file/d/1fQcvdrkZH0zkAgY54eGMzErAVZXFz-0G/view?usp=sharing 
 * **Final Report** https://github.com/CMU-IDS-2021/fp--zhiyun/blob/main/Report.md
