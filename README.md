@@ -8,7 +8,7 @@ This interactive Streamlit app helps users design new experiments using Bayesian
 
 ## 🔗 Links
 
-- 🧪 **[Access the app](https://01986884-790c-7a78-ad68-4ce16ac18368.share.connect.posit.cloud/)**  
+- 🧪 **[[Access the app]](https://zhiyunapps-active-experiment-dashboard.share.connect.posit.cloud)**  
 - 🎥 **[Video Demonstration](https://drive.google.com/file/d/1fQcvdrkZH0zkAgY54eGMzErAVZXFz-0G/view?usp=sharing)**  
 - 📄 **[Final Report](https://github.com/CMU-IDS-2021/fp--zhiyun/blob/main/Report.md)**  
 
